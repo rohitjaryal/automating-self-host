@@ -1,0 +1,125 @@
+---
+
+- name: Setup VM
+  hosts: localhost
+  become: yes
+  vars:
+    nvm_dir: "/home/{{ ansible_user }}/.nvm"  # Define nvm directory based on ansible_user
+    git_dest: "/home/{{ ansible_user }}/my-service"  # Replace with your desired destination directory
+    git_repo: "https://{{ github_token }}@{{ github_repo }}"  # Replace with your repository URL
+
+  tasks:
+    - name: Update and upgrade apt packages
+      apt:
+        update_cache: yes
+        upgrade: dist
+
+    # Install required packages for nvm installation
+    - name: Install required packages
+      apt:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - curl
+        - git
+        - software-properties-common
+
+    - name: Debug everything
+      debug:
+        msg: "testing {{ ansible_user }}"
+
+    - name: Download NVM installation script
+      get_url:
+        url: https://raw.githubusercontent.com/creationix/nvm/master/install.sh
+        dest: /tmp/install_nvm.sh
+        mode: '0755'
+
+    - name: Install NVM (Node Version Manager)
+      shell: bash /tmp/install_nvm.sh
+      args:
+        executable: /bin/bash
+      environment:
+        HOME: "/home/{{ ansible_user }}"
+      become_user: "{{ ansible_user }}"
+
+    - name: Ensure NVM is sourced in .bashrc
+      lineinfile:
+        path: "/home/{{ ansible_user }}/.bashrc"
+        line: |
+          export NVM_DIR="$HOME/.nvm"
+          [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+          [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"
+      become: yes
+      become_user: "{{ ansible_user }}"
+
+    - name: Install Node.js LTS using NVM
+      shell: |
+        . /home/{{ ansible_user }}/.nvm/nvm.sh
+        nvm install lts/hydrogen
+        nvm use lts/hydrogen
+      args:
+        executable: /bin/bash
+      environment:
+        HOME: "/home/{{ ansible_user }}"
+      become_user: "{{ ansible_user }}"
+
+    - name: Verify Node.js installation
+      shell: |
+        . /home/{{ ansible_user }}/.nvm/nvm.sh
+        node --version
+      register: node_version_output
+      args:
+        executable: /bin/bash
+      environment:
+        HOME: "/home/{{ ansible_user }}"
+      become_user: "{{ ansible_user }}"
+
+    - debug:
+        var: node_version_output.stdout
+
+    - name: Install PM2 globally
+      shell: |
+        . /home/{{ ansible_user }}/.nvm/nvm.sh
+        npm install -g pm2
+      args:
+        executable: /bin/bash
+      environment:
+        HOME: "/home/{{ ansible_user }}"
+      become_user: "{{ ansible_user }}"
+
+    - name: Install Certbot
+      apt:
+        name: certbot
+        state: present
+
+    - name: Clone the Git repository using GitHub access token
+      git:
+          repo: "{{ git_repo }}"
+          dest: "{{ git_dest }}"
+          force: yes  # Optional: Forces the clone if the destination directory already exists
+          version: main  # Optional: Specify the branch or tag to checkout
+          accept_hostkey: yes  # Optional: Accepts the SSH host key during cloning
+
+
+    - name: Create directory if it doesn't exist
+      ansible.builtin.file:
+                  path: "/home/{{ ansible_user }}/noip-duc_3.1.0"  # Replace with the path of the directory you want to create
+                  state: directory
+
+    - name: Download noip-duc archive
+      get_url:
+        url: "https://www.noip.com/download/linux/latest"
+        dest: "/home/{{ ansible_user }}/noip-duc_3.1.1.tar.gz"
+        mode: '0755'
+
+    - name: Extract noip-duc archive
+      unarchive:
+        src: "/home/{{ ansible_user }}/noip-duc_3.1.1.tar.gz"
+        dest: "/home/{{ ansible_user }}"
+        remote_src: yes
+
+    - name: Install noip-duc package
+      apt:
+        deb: "/home/{{ ansible_user }}/noip-duc_3.1.1/binaries/noip-duc_3.1.1_arm64.deb"
+        state: present
+        update_cache: yes
