@@ -74,4 +74,9 @@ CMD ["/usr/sbin/sshd", "-D"]
 #docker run -d -p 2222:22 --name my-debian-with-ssh-container my-debian-with-ssh
 #ssh dockeruser@localhost -p 2222
 
+# Run ansible playbook via inventory
+
 #ansible-playbook -i inventory.ini setup_raspberry_pi.yml
+
+# Currently some issues with environment setup. Mainly because of NPM. When npm is installed it installed under
+# different pretext. Need to investgate more.
