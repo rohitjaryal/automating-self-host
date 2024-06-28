@@ -7,6 +7,9 @@
     nvm_dir: "/home/{{ ansible_user }}/.nvm"  # Define nvm directory based on ansible_user
     git_dest: "/home/{{ ansible_user }}/my-service"  # Replace with your desired destination directory
     git_repo: "https://{{ github_token }}@{{ github_repo }}"  # Replace with your repository URL
+    node_version: v18.20.3
+    app_dir: "/home/{{ ansible_user }}/projects/service"
+    path_vars: "/home/{{ ansible_user }}/.nvm/versions/node/{{ node_version }}/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
 
   tasks:
     - name: Update and upgrade apt packages
